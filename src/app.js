@@ -1,5 +1,4 @@
 import { supabase } from './supabase.js';
-import { PAYMENT_QR_URL } from './config.js';
 import { canAccessFeature, tierLabel } from './tier.js';
 
 let currentTeam = null;
@@ -16,7 +15,7 @@ async function loadApp() {
   currentTeam = memberships[0].teams;
   renderTeam(); show('app-view');
 }
-function show(id) { ['auth-view','onboarding-view','app-view'].forEach((view) => $(`#${view}`).classList.toggle('hidden', view !== id)); }
+function show(id) { ['auth-view','register-view','onboarding-view','app-view'].forEach((view) => $(`#${view}`).classList.toggle('hidden', view !== id)); }
 function renderTeam() {
   $('#team-title').textContent = currentTeam.name;
   $('#tier-badge').textContent = tierLabel(currentTeam.tier) + (currentTeam.is_upgrade_pending ? ' · Đang chờ duyệt' : '');
@@ -24,26 +23,27 @@ function renderTeam() {
     const locked = !canAccessFeature(currentTeam.tier, button.dataset.feature);
     button.querySelector('span')?.classList.toggle('hidden', !locked);
   });
-  $('#transfer-note').textContent = `LENKEO ${currentTeam.name.toUpperCase()} BIAHOI`;
+  $('#transfer-note').textContent = `${currentTeam.name.toUpperCase().replace(/[^A-Z0-9]/g, '')}_BIAHOI`;
 }
 $('#auth-form').addEventListener('submit', async (event) => {
   event.preventDefault(); const button = $('#auth-submit'); button.disabled = true;
-  const { error } = await supabase.auth.signInWithPassword({ email: $('#email').value.trim(), password: $('#password').value });
+  const { error } = await supabase.auth.signInWithPassword({ email: $('#login-email').value.trim(), password: $('#login-password').value });
   button.disabled = false; if (error) return message('#auth-message', error.message); loadApp();
 });
-$('#sign-up').addEventListener('click', async () => {
-  const email = $('#email').value.trim(), password = $('#password').value;
-  if (!email || password.length < 6) return message('#auth-message', 'Nhập email và mật khẩu tối thiểu 6 ký tự trước.');
-  const { error } = await supabase.auth.signUp({ email, password });
-  if (error) return message('#auth-message', error.message);
-  message('#auth-message', 'Đã tạo tài khoản. Kiểm tra email để xác thực, sau đó đăng nhập.', 'text-lime');
+$('#show-register').addEventListener('click', () => show('register-view'));
+$('#show-login').addEventListener('click', () => show('auth-view'));
+$('#register-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const email = $('#register-email').value.trim(), password = $('#register-password').value;
+  const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}${window.location.pathname}` } });
+  if (error) return message('#register-message', error.message);
+  if (data.session) return loadApp();
+  message('#register-message', 'Tài khoản đã được tạo. Hãy kiểm tra Hộp thư đến hoặc Spam để xác nhận email, rồi quay lại đăng nhập.', 'text-lime');
 });
 $('#team-form').addEventListener('submit', async (event) => {
-  event.preventDefault(); const { data: { user } } = await supabase.auth.getUser();
-  const { data: team, error } = await supabase.from('teams').insert({ name: $('#team-name').value.trim(), created_by: user.id }).select().single();
+  event.preventDefault();
+  const { data: team, error } = await supabase.rpc('create_team', { team_name: $('#team-name').value.trim() }).single();
   if (error) return message('#team-message', error.message);
-  const { error: memberError } = await supabase.from('team_memberships').insert({ team_id: team.id, user_id: user.id, role: 'owner' });
-  if (memberError) return message('#team-message', memberError.message);
   currentTeam = team; renderTeam(); show('app-view');
 });
 document.querySelectorAll('.feature-btn').forEach((button) => button.addEventListener('click', () => {
@@ -52,7 +52,7 @@ document.querySelectorAll('.feature-btn').forEach((button) => button.addEventLis
   const names = { overview: 'Tổng quan', unvoted_list: 'Danh sách chưa vote', treasury: 'Quỹ đội' };
   $('#feature-content').innerHTML = `<h2 class="text-xl font-bold">${names[feature]}</h2><p class="mt-2 text-sm text-slate-400">Tính năng đã được mở cho gói ${tierLabel(currentTeam.tier)}.</p>`;
 }));
-function openPaywall() { $('#paywall').classList.replace('hidden', 'flex'); if (PAYMENT_QR_URL) { $('#payment-qr').src = PAYMENT_QR_URL; $('#payment-qr').classList.remove('hidden'); $('#qr-placeholder').classList.add('hidden'); } }
+function openPaywall() { $('#paywall').classList.replace('hidden', 'flex'); }
 $('.close-modal').addEventListener('click', () => $('#paywall').classList.replace('flex', 'hidden'));
 $('#upgrade-button').addEventListener('click', openPaywall);
 $('#paid-button').addEventListener('click', async () => {
