@@ -12,15 +12,20 @@ Trong Supabase project `cdojcjqryycbouofjvry`, mở **SQL Editor** và chạy to
 
 Mở `index.html` qua một static server (VS Code Live Server hoặc Cloudflare/Vercel Preview), không nên double-click `file://` vì trình duyệt có thể chặn ES modules.
 
-1. Đăng ký email và kiểm tra email xác thực nếu Supabase Auth yêu cầu.
-2. Đăng nhập, tạo một đội. Đội mặc định là `tra_da`.
-3. Bấm **Quỹ đội** hoặc **Chưa vote**: modal paywall hiện ra.
-4. Bấm **Tôi đã chuyển khoản**: `teams.is_upgrade_pending` đổi sang `true`.
-5. Trong Supabase Table Editor, đổi `tier` của đội thành `bia_hoi`; tải lại app. Hai tính năng được mở.
+1. Trong Supabase SQL Editor, chạy `001_multi_tenant.sql`, sau đó chạy `002_fix_create_team_rpc.sql` và `003_enforce_free_member_limit.sql`.
+2. Đăng ký email và kiểm tra email xác thực nếu Supabase Auth yêu cầu.
+3. Đăng nhập, tạo một đội. Đội mặc định là `tra_da`.
+4. Bấm **Quỹ đội** hoặc **Chưa vote**: modal paywall hiện ra.
+5. Bấm **Tôi đã chuyển khoản**: `teams.is_upgrade_pending` đổi sang `true`.
+6. Trong Supabase Table Editor, đổi `tier` của đội thành `bia_hoi`; tải lại app. Hai tính năng được mở.
 
-## 3. QR thanh toán
+### Nếu không nhận được email xác thực
 
-Thay `PAYMENT_QR_URL = ''` trong `src/config.js` bằng URL VietQR của tài khoản nhận tiền thật. Đồng thời đổi nội dung chuyển khoản trong `src/app.js` nếu cần.
+Trong Supabase Dashboard, vào **Authentication → Providers → Email** và bảo đảm Email provider đang bật. Vào **Authentication → URL Configuration**, thêm URL Redirect `https://vinhcris.github.io/lenkeo/saas.html` (và domain production sau này). Kiểm tra cả thư mục Spam; email mặc định của Supabase có thể bị nhà cung cấp thư chặn hoặc chậm. Nếu chỉ thử nội bộ, có thể tắt **Confirm email** tạm thời trong Email provider, nhưng phải bật lại trước khi mở bán.
+
+## 3. Duyệt nâng cấp thủ công
+
+Paywall hiển thị thông tin BIDV và nội dung chuyển khoản theo dạng `TENDOI_BIAHOI`. Khi khách nhấn **Tôi đã chuyển khoản**, app chỉ đặt `is_upgrade_pending = true`. Sau khi kiểm tra giao dịch, admin vào bảng `teams` của Supabase để đổi `tier` sang `bia_hoi` hoặc `len_mam`, rồi đổi `is_upgrade_pending` về `false`.
 
 ## 4. Lưu ý bảo mật trước khi bán
 

@@ -1,5 +1,5 @@
 import { supabase } from './supabase.js';
-import { canAccessFeature, tierLabel } from './tier.js';
+import { PLANS, canAccessFeature, tierLabel } from './tier.js';
 
 let currentTeam = null;
 const $ = (selector) => document.querySelector(selector);
@@ -19,6 +19,8 @@ function show(id) { ['auth-view','register-view','onboarding-view','app-view'].f
 function renderTeam() {
   $('#team-title').textContent = currentTeam.name;
   $('#tier-badge').textContent = tierLabel(currentTeam.tier) + (currentTeam.is_upgrade_pending ? ' · Đang chờ duyệt' : '');
+  const plan = PLANS[currentTeam.tier];
+  $('#plan-detail').textContent = plan ? `${plan.memberLimit === Infinity ? 'Không giới hạn' : `Tối đa ${plan.memberLimit}`} thành viên · ${plan.features.join(' · ')}` : '';
   document.querySelectorAll('[data-feature]').forEach((button) => {
     const locked = !canAccessFeature(currentTeam.tier, button.dataset.feature);
     button.querySelector('span')?.classList.toggle('hidden', !locked);
